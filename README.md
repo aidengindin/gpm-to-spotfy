@@ -10,3 +10,5 @@ You'll need to install a few dependencies. On Ubuntu:
 $ sudo apt install python3-pip
 $ pip3 install gmusicapi
 ```
+
+Next, 
