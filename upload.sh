@@ -1,7 +1,7 @@
 #! /bin/bash
 
 client_id='ffaf5398b2ec4b0084f38b39b7bdefdf'
-client_secret='51bb1c70a7e542e9b6c7b3f27de91668'
+client_secret=$(<secret)
 redirect_uri='http%3A%2F%2Flocalhost%3A8080%2Fcallback'
 
 # Start the webserver
