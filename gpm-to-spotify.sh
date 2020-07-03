@@ -31,11 +31,17 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     python3 oauth.py
 fi
 
+# get device ids in a very, very hacky way
+echo "About to throw an error..."
+python3 error.py
+read -p "Please enter one of the device ids listed above: " deviceid
 
-# get list of albums
-python3 download.py > albums.tmp
+# get albums from GPM
+echo "Getting albums from GPM (this may take some time)..."
+python3 download.py $deviceid > albums.tmp
 
+# Upload music
 ./upload.sh
 
 # clean up
-# rm albums.tmp
+rm albums.tmp

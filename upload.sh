@@ -21,27 +21,37 @@ token=$(curl -s -X POST \
      | jq '."access_token"' \
      | sed 's/\"//g')
 
-# Read albums
-readarray -t albums < albums.tmp
+# Read albums & artists
+readarray -t lines < albums.tmp
+albums=()
+artists=()
+for line in "${lines[@]}"; do
+    IFS='|' read -ra line_arr <<< $line
+    albums[${#albums[@]}]=${line_arr[0]}
+    artists[${#artists[@]}]=${line_arr[1]}
+done
 
 # errors array contains albums that we couldn't find a match for
 errors=()
 
 # Where the magic happens
 echo "Adding albums to Spotify (this may take some time...)"
-for album in "${albums[@]}"; do
-    encoded=$(urlencode $album)
-    curl -s -X GET -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/search?q=${encoded}&type=album&limit=1"
-    id=$(curl -s -X GET -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/search?q=${encoded}&type=album" \
+for i in $(seq 1 ${#albums[@]}); do
+    album=${albums[i]}
+    artist=${artists[i]}
+    encoded_album=$(urlencode $album)
+    encoded_artist=$(urlencode $artist)
+    id=$(curl -s -X GET -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/search?q=album:${encoded_album}+artist:${encoded_artist}&type=album" \
         | jq '."albums"."items"[0]."id"' \
         | sed 's/\"//g')
-    if [ $id == "null" ]; then
+    if [[ $id == "null" ]]; then
         errors[${#errors[@]}]=$album
     else
         curl -s -X PUT -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/me/albums?ids=${id}"
     fi
 done
 
+# Show failed albums to the user
 echo "No matches in Spotify were found for the following albums. You may want to add them manually."
 for album in "${errors[@]}"; do
     echo "- ${album}"
