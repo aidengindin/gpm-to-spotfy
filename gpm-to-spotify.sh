@@ -38,7 +38,7 @@ read -p "Please enter one of the device ids listed above: " deviceid
 
 # get albums from GPM
 echo "Getting albums from GPM (this may take some time)..."
-python3 download.py $deviceid > albums.tmp
+python3 download.py $deviceid
 
 # Upload music
 ./upload.sh
