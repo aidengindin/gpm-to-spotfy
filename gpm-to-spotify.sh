@@ -37,11 +37,11 @@ python3 error.py
 read -p "Please enter one of the device ids listed above: " deviceid
 
 # get albums from GPM
-echo "Getting albums from GPM (this may take some time)..."
+echo "Getting albums and playlists from GPM (this may take some time)..."
 python3 download.py $deviceid
 
 # Upload music
 ./upload.sh
 
 # clean up
-rm albums.tmp
+rm albums.tmp playlists.tmp
