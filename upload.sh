@@ -4,6 +4,11 @@ client_id='ffaf5398b2ec4b0084f38b39b7bdefdf'
 client_secret=$(<secret)
 redirect_uri='http%3A%2F%2Flocalhost%3A8080%2Fcallback'
 
+dryrun=false
+if [[ $* == *-d* ]]; then  ## if -d (dryrun) flag was passed
+    dryrun=true
+fi
+
 # Start the webserver
 echo "Starting webserver on port 8080..."
 node server.js &
@@ -54,7 +59,14 @@ for i in $(seq 1 ${#albums[@]}); do
     if [[ $id == "null" ]]; then
         errors[${#errors[@]}]=$album
     else
-        curl -s -X PUT -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/me/albums?ids=${id}"
+        if $dryrun; then
+            json=$(curl -s -X GET -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/albums/${id}")
+            title=$(echo $json | jq '."name"' | sed 's/\"//g')
+            artist=$(echo $json | jq '."artists"[0]."name"' | sed 's/\"//g')
+            echo "Would add album ${title} by artist ${artist}"
+        else
+            curl -s -X PUT -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/me/albums?ids=${id}"
+        fi
     fi
 done
 
@@ -74,13 +86,15 @@ while read -r line; do
     # Lines marked with "PLAYLIST ENTRY" mark the beginning of a new playlist and contain the playlist name
     if [[ $line =~ "PLAYLIST ENTRY" ]]; then
         name=$(echo $line | awk '{$1=$2=""; print $0}')
-        playlist_id=$(curl -s -X POST \
-                           -H "Authorization: Bearer ${token}" \
-                           -H "Content-Type: application/json" \
-                           -d "{\"name\": \"${name}\", \"public\": false}" \
-                           "https://api.spotify.com/v1/users/${user_id}/playlists" \
-                          | jq '."id"' \
-                          | sed 's/\"//g')
+        if [[ $dryrun = false ]]; then
+            playlist_id=$(curl -s -X POST \
+                               -H "Authorization: Bearer ${token}" \
+                               -H "Content-Type: application/json" \
+                               -d "{\"name\": \"${name}\", \"public\": false}" \
+                               "https://api.spotify.com/v1/users/${user_id}/playlists" \
+                              | jq '."id"' \
+                              | sed 's/\"//g')
+        fi
     else
 
         # Get the song id
@@ -89,23 +103,30 @@ while read -r line; do
         artist=${line_arr[1]}
         encoded_song=$(urlencode $song)
         encoded_artist=$(urlencode $artist)
-        song_uri=$(curl -s -X GET \
+        json=$(curl -s -X GET \
                         -H "Authorization: Bearer ${token}" \
-                        "https://api.spotify.com/v1/search?q=track:${encoded_song}+artist:${encoded_artist}&type=track" \
-                       | jq '."tracks"."items"[0]."uri"' \
-                       | sed 's/\"//g')
+                        "https://api.spotify.com/v1/search?q=track:${encoded_song}+artist:${encoded_artist}&type=track")
+        song_uri=$(echo $json | jq '."tracks"."items"[0]."uri"' | sed 's/\"//g')
+        song_id=$(echo $json | jq '."tracks"."items"[0]."id"' | sed 's/\"//g')
 
         # If it failed, add it to the error array
         if [[ $song_uri == "null" ]]; then
             errors[${#errors[@]}]="${song} in playlist ${name}"
         else
-            # Add the song to the playlist
-            encoded_uri=$(urlencode $song_uri)
-            curl -s -X POST \
-                 -H "Authorization: Bearer ${token}" \
-                 -H "Content-Type: application/json" \
-                 "https://api.spotify.com/v1/playlists/${playlist_id}/tracks?uris=${encoded_uri}" \
-                 > /dev/null
+            if $dryrun; then
+                json=$(curl -s -X GET -H "Authorization: Bearer ${token}" "https://api.spotify.com/v1/tracks/${song_id}")
+                title=$(echo $json | jq '."name"' | sed 's/\"//g')
+                artist=$(echo $json | jq '."artists"[0]."name"' | sed 's/\"//g')
+                echo "Would add song ${title} by artist ${artist} to playlist ${name}"
+            else
+                # Add the song to the playlist
+                encoded_uri=$(urlencode $song_uri)
+                curl -s -X POST \
+                     -H "Authorization: Bearer ${token}" \
+                     -H "Content-Type: application/json" \
+                     "https://api.spotify.com/v1/playlists/${playlist_id}/tracks?uris=${encoded_uri}" \
+                     > /dev/null
+            fi
         fi
     fi
 done < playlists.tmp

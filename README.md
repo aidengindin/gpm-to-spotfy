@@ -16,7 +16,7 @@ Make sure `gpm-to-spotify.sh` is executable:
 $ chmod +x gpm-to-spotify.sh
 ```
 
-From there, just execute `gpm-to-spotify.sh` and it should walk you through the rest.
+From there, just execute `gpm-to-spotify.sh` and it should walk you through the rest. Use the `-d` flag for a dry run to see what the script would do without actually pushing any changes to Spotify.
 
 ## Getting the client secret
 A file called `secret`, containing my Spotify client secret key, is missing from this repository; the project won't work without it. This is because I don't want someone stealing the key and using it to gain access to the Spotify accounts of this project's users. Unless you can get my secret, you'll have to create your own project through the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and use your own client ID and secret key. You'll also have to add `http://localhost:8080/callback` as a redirect URI in the project settings in the dashboard.
